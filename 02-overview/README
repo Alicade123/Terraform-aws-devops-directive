@@ -1,0 +1,59 @@
+# 02 - Overview + Setup
+
+## Install Terraform
+
+Official HashiCorp installation instructions:
+
+- [Install the Terraform CLI](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+
+## Install Terraform for window 
+
+- [HashiCorp Developer](https://developer.hashicorp.com/terraform/install)
+
+## AWS Account Setup
+
+AWS Terraform provider authentication documentation:
+
+- [AWS Provider Authentication](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#authentication)
+
+Follow these steps:
+
+1. Create a non-root AWS user.
+2. Add the necessary IAM permissions, such as `AmazonEC2FullAccess`.
+3. Save an access key and secret key, or authenticate using the AWS CLI:
+
+```bash
+aws configure
+```
+
+For AWS CLI installation instructions, see:
+
+- [Installing or updating to the latest version of the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
+
+## Hello World
+
+The `main.tf` file contains a minimal Terraform configuration that provisions an AWS EC2 instance.
+
+Run the following commands:
+
+```bash
+aws configure
+terraform init
+terraform plan
+terraform apply
+```
+
+### Command descriptions
+
+- `aws configure` — Configure AWS credentials and the default region.
+- `terraform init` — Initialize the Terraform working directory and download required providers.
+- `terraform plan` — Preview the infrastructure changes Terraform will make.
+- `terraform apply` — Create or update the infrastructure described by `main.tf`.
+
+## Cleanup
+
+To remove resources created by this example:
+
+```bash
+terraform destroy
+```

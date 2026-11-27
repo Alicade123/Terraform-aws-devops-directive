@@ -1,0 +1,22 @@
+# Web App Infrastructure
+
+## DNS Nameservers
+
+Add the following AWS nameservers to your domain registrar so the Route 53 settings are applied:
+
+- ns-1147.awsdns-15.org
+- ns-161.awsdns-20.com
+- ns-1629.awsdns-11.co.uk
+- ns-876.awsdns-45.net
+
+## Architecture
+
+![Web app architecture](architecture.png)
+
+## Notes
+
+- AWS EC2 security groups block inbound traffic by default. A security group rule must be added using the EC2 instance's IP address to allow inbound access.
+- Connect to the PostgreSQL database using the following command:
+
+  ```bash
+  psql -U foo -d mydb -p 5432 -h terraform-20210127022433201300000001.cr2ub9wmsmpg.us-east-1.rds.amazonaws.com

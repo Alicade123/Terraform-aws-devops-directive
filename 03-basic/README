@@ -1,0 +1,70 @@
+# 03 - Basics
+
+## Remote Backends
+
+Remote backends allow Terraform state files to be stored in a remote location rather than locally. This enables secure collaboration by allowing multiple team members to access and manage the same infrastructure state.
+
+### Terraform Cloud
+
+Terraform Cloud provides a managed remote backend for storing Terraform state and collaborating on infrastructure management.
+
+- Website: https://www.terraform.io/cloud
+- Configuration file: `./terraform-cloud-backend/main.tf`
+
+### AWS S3 + DynamoDB
+
+Terraform can use an AWS S3 bucket to store remote state and a DynamoDB table to manage state locking.
+
+**Steps to initialize and configure the remote backend:**
+
+1. Navigate to the `./aws-backend/` directory.
+2. Use the Terraform configuration to provision the S3 bucket and DynamoDB table using the local state backend:
+   ```powershell
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+3. Once the resources have been successfully created, uncomment the remote backend configuration in the Terraform configuration files.
+4. Reinitialize Terraform to migrate the existing local state to the newly configured S3 backend:
+
+   ```powershell
+   terraform init
+   ```
+
+5. Terraform will prompt you to migrate the existing state:
+
+   ```text
+   Do you want to copy existing state to the new backend?
+
+   Pre-existing state was found while migrating the previous "local" backend
+   to the newly configured "s3" backend. No existing state was found in the
+   newly configured "s3" backend.
+
+   Do you want to copy this state to the new "s3" backend?
+
+   Enter a value: yes
+   ```
+
+6. Enter `yes` to copy the existing local state into the S3 bucket.
+
+**Result:** The S3 bucket and DynamoDB table are now provisioned and configured for remote Terraform state management.
+
+---
+
+## Web Application
+
+This section introduces a generic web application architecture built using AWS infrastructure components.
+
+The architecture includes:
+
+- **EC2 Instances:** Host and run the web application.
+- **S3 Bucket:** Provides object storage for application assets and files.
+- **RDS Instance:** Provides managed relational database services.
+- **Load Balancer:** Distributes incoming application traffic across EC2 instances.
+- **Route 53:** Provides DNS management and domain name resolution.
+
+This example introduces the fundamental AWS infrastructure components required to deploy a web application. The architecture will be refined and improved in later modules.
+
+## Architecture
+
+![Web Application Architecture](./web-app/architecture.png)

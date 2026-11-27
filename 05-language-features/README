@@ -1,0 +1,420 @@
+# HashiCorp Configuration Language (HCL) Features
+
+The official Terraform documentation is the best reference for understanding HCL and its features:
+
+https://developer.hashicorp.com/terraform/language
+
+**Note:** Use `hcl` as the code-block language for syntax highlighting. If your Markdown editor does not support it, `py` can be used as an alternative for basic highlighting.
+
+---
+
+## 1. Expressions
+
+Expressions are used to reference, calculate, and combine values within Terraform configurations.
+
+### Strings
+
+Terraform supports literal strings and template strings.
+
+```hcl
+"foo" # Literal string
+
+"foo ${var.bar}" # Template string
+```
+
+String interpolation (`${...}`) allows you to embed expressions inside strings.
+
+### Operators
+
+Terraform supports several operators for performing calculations, comparisons, and logical operations.
+
+```hcl
+# Order of operations (from highest to lowest precedence)
+
+!       # Logical NOT
+-       # Unary negation
+
+*       # Multiplication
+/       # Division
+%       # Modulo (remainder)
+
++       # Addition
+-       # Subtraction
+
+>       # Greater than
+>=      # Greater than or equal to
+<       # Less than
+<=      # Less than or equal to
+
+==      # Equal to
+!=      # Not equal to
+
+&&      # Logical AND
+||      # Logical OR
+```
+
+**Example:**
+
+```hcl
+variable "environment" {
+  type    = string
+  default = "production"
+}
+
+locals {
+  is_production = var.environment == "production"
+  is_development = var.environment == "development"
+}
+```
+
+### Conditionals
+
+Terraform supports conditional expressions using ternary syntax.
+
+```hcl
+condition ? true_val : false_val
+```
+
+Terraform evaluates the condition and returns:
+- `true_val` if the condition is true.
+- `false_val` if the condition is false.
+
+**Example:**
+
+```hcl
+var.a != "" ? var.a : "default-a"
+```
+
+If `var.a` is not an empty string, Terraform returns its value. Otherwise, it returns `"default-a"`.
+
+Another practical example:
+
+```hcl
+variable "environment" {
+  type    = string
+  default = "development"
+}
+
+locals {
+  instance_type = var.environment == "production" ? "t3.large" : "t2.micro"
+}
+```
+
+### Other Expression Types
+
+- **For expressions:** Transform collections such as lists, maps, and sets.
+- **Splat expressions:** Extract attributes from multiple elements in a collection.
+- **Dynamic blocks:** Generate repeated nested configuration blocks dynamically.
+- **Type constraints:** Define the expected data types for variables and other values.
+- **Version constraints:** Specify acceptable versions of Terraform or providers.
+
+---
+
+## 2. Functions
+
+Terraform provides built-in functions for manipulating strings, numbers, collections, dates, and other values.
+
+Functions can be used inside expressions to transform or calculate values.
+
+### Numeric Functions
+
+| Function | Purpose |
+|---|---|
+| `abs()` | Returns the absolute value of a number. |
+| `ceil()` | Rounds a number up to the nearest integer. |
+| `floor()` | Rounds a number down to the nearest integer. |
+| `log()` | Calculates the logarithm of a number. |
+| `max()` | Returns the largest number from the supplied values. |
+| `parseint()` | Converts a string into an integer using a specified base. |
+| `pow()` | Raises a number to a specified power. |
+| `signum()` | Returns the sign of a number (-1, 0, or 1). |
+
+### String Functions
+
+| Function | Purpose |
+|---|---|
+| `chomp()` | Removes newline characters at the end of a string. |
+| `format()` | Formats a string using formatting directives. |
+| `formatlist()` | Formats each element in a list. |
+| `indent()` | Adds indentation to lines in a string. |
+| `join()` | Combines a list of strings using a separator. |
+| `lower()` | Converts a string to lowercase. |
+| `regex()` | Extracts a match using a regular expression. |
+| `regexall()` | Returns all matches of a regular expression. |
+| `replace()` | Replaces matching text in a string. |
+| `split()` | Splits a string into a list using a separator. |
+| `strrev()` | Reverses a string. |
+| `substr()` | Extracts part of a string. |
+| `title()` | Converts the first letter of each word to uppercase. |
+| `trim()` | Removes specified characters from the beginning and end of a string. |
+| `trimprefix()` | Removes a specified prefix. |
+| `trimsuffix()` | Removes a specified suffix. |
+| `trimspace()` | Removes whitespace from the beginning and end of a string. |
+| `upper()` | Converts a string to uppercase. |
+
+### Other Function Categories
+
+Terraform also provides functions for:
+
+- **Collection functions:** Manipulate lists, maps, sets, and other collections.
+- **Encoding functions:** Encode and decode data formats.
+- **Filesystem functions:** Read files and retrieve file-related information.
+- **Date and time functions:** Work with timestamps and date-related values.
+- **Hash and crypto functions:** Generate hashes and perform cryptographic operations.
+- **IP network functions:** Calculate and manipulate IP addresses and CIDR ranges.
+- **Type conversion functions:** Convert values between supported data types.
+
+**Official reference:** https://developer.hashicorp.com/terraform/language/functions
+
+---
+
+## 3. Meta-Arguments
+
+Meta-arguments are special arguments that change how Terraform manages resources and modules.
+
+Unlike normal resource arguments, meta-arguments control Terraform's behavior, such as resource dependencies, instance creation, and lifecycle management.
+
+### 3.1 depends_on
+
+The `depends_on` meta-argument explicitly defines dependencies between resources or modules.
+
+Terraform normally identifies dependencies automatically when one resource references another resource's attributes.
+
+However, sometimes a dependency exists without a direct reference. In such cases, `depends_on` can be used to enforce the required creation order.
+
+**Example:**
+
+```hcl
+resource "aws_iam_role" "example" {
+  name = "example-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-0123456789abcdef0"
+  instance_type = "t2.micro"
+
+  depends_on = [
+    aws_iam_role.example
+  ]
+}
+```
+
+In this example, Terraform creates the IAM role before creating the EC2 instance.
+
+### 3.2 count
+
+The `count` meta-argument allows Terraform to create multiple instances of a resource or module.
+
+It is most useful when the instances have nearly identical configurations.
+
+**Example:**
+
+```hcl
+resource "aws_instance" "example" {
+  count         = 3
+  ami           = "ami-0123456789abcdef0"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "server-${count.index}"
+  }
+}
+```
+
+This creates three EC2 instances.
+
+Terraform provides `count.index` to identify each instance:
+
+- First instance: `count.index = 0`
+- Second instance: `count.index = 1`
+- Third instance: `count.index = 2`
+
+**Using count with a conditional expression:**
+
+`count = 0` can be used to prevent Terraform from creating a resource. This is commonly combined with a conditional expression.
+
+```hcl
+resource "aws_instance" "example" {
+  count = var.create_instance ? 1 : 0
+
+  ami           = "ami-0123456789abcdef0"
+  instance_type = "t2.micro"
+}
+```
+
+If `var.create_instance` is `true`, Terraform creates one instance. Otherwise, it creates none.
+
+### 3.3 for_each
+
+The `for_each` meta-argument also allows Terraform to create multiple instances of a resource or module.
+
+Unlike `count`, which identifies instances using numerical indexes, `for_each` identifies instances using unique keys.
+
+It accepts a map or a set of strings.
+
+**Example using a set:**
+
+```hcl
+resource "some_resource" "example" {
+  for_each = toset(["foo", "bar", "baz"])
+
+  name = each.key
+}
+```
+
+This creates three instances with the following names:
+
+- `foo`
+- `bar`
+- `baz`
+
+**Example using a map:**
+
+```hcl
+resource "aws_instance" "example" {
+  for_each = {
+    dev  = "t2.micro"
+    test = "t2.small"
+    prod = "t3.medium"
+  }
+
+  ami           = "ami-0123456789abcdef0"
+  instance_type = each.value
+
+  tags = {
+    Name = each.key
+  }
+}
+```
+
+Terraform creates three instances:
+
+| Instance key | Instance type |
+|---|---|
+| `dev` | `t2.micro` |
+| `test` | `t2.small` |
+| `prod` | `t3.medium` |
+
+The following references are available:
+
+- `each.key`: The current map key or set element.
+- `each.value`: The corresponding map value, or the same string as `each.key` when using a set.
+
+**Key difference:**
+
+| count | for_each |
+|---|---|
+| Uses numerical indexes. | Uses unique keys. |
+| Best for nearly identical instances. | Best for instances with distinct configurations. |
+| Uses `count.index`. | Uses `each.key` and `each.value`. |
+| Changing list positions can affect resource identity. | Keys provide more stable resource identity. |
+
+### 3.4 lifecycle
+
+The `lifecycle` meta-argument controls how Terraform handles resource creation, updates, and destruction.
+
+It contains several lifecycle rules.
+
+#### create_before_destroy
+
+Setting `create_before_destroy = true` instructs Terraform to create a replacement resource before destroying the existing resource.
+
+This is useful for scenarios such as rolling infrastructure replacements and minimizing downtime.
+
+```hcl
+resource "some_resource" "example" {
+  # Resource configuration
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+```
+
+**Important:** This does not guarantee zero downtime. The resource must support having old and new instances coexist, and dependencies or naming constraints may affect the replacement process.
+
+#### ignore_changes
+
+The `ignore_changes` argument tells Terraform to ignore changes to specified resource attributes during update planning.
+
+This is useful when an external system or another process is expected to manage certain attributes.
+
+For example, an external process might automatically update resource metadata or tags.
+
+```hcl
+resource "aws_instance" "example" {
+  ami           = "ami-0123456789abcdef0"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name        = "example-instance"
+    Environment = "development"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      tags["Environment"]
+    ]
+  }
+}
+```
+
+Terraform will ignore changes to the `Environment` tag when planning updates to this resource.
+
+**Important:** `ignore_changes` does not prevent Terraform from initially setting the attribute during resource creation.
+
+#### prevent_destroy
+
+The `prevent_destroy` argument provides protection against accidental resource destruction.
+
+When set to `true`, Terraform rejects plans that would destroy the resource while the lifecycle rule remains in the configuration.
+
+```hcl
+resource "aws_db_instance" "example" {
+  allocated_storage = 20
+  engine            = "mysql"
+  instance_class    = "db.t3.micro"
+
+  username = "admin"
+  password = var.db_pass
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+```
+
+Terraform will reject an operation that attempts to destroy this database instance.
+
+**Important:** `prevent_destroy` is not a complete deletion safeguard. If the resource configuration, including its lifecycle rule, is removed, Terraform can plan its destruction.
+
+---
+
+## 4. Quick Revision
+
+| Feature | Main purpose |
+|---|---|
+| Expressions | Calculate, compare, and combine values. |
+| Functions | Transform and manipulate values. |
+| `depends_on` | Explicitly define resource dependencies. |
+| `count` | Create multiple resource instances using indexes. |
+| `for_each` | Create multiple resource instances using keys. |
+| `create_before_destroy` | Create replacements before destroying existing resources. |
+| `ignore_changes` | Ignore changes to specified resource attributes. |
+| `prevent_destroy` | Reject resource destruction while the rule remains configured. |
+
+**Official Terraform references:**
+
+- HCL and language features: https://developer.hashicorp.com/terraform/language
+- Expressions: https://developer.hashicorp.com/terraform/language/expressions
+- Functions: https://developer.hashicorp.com/terraform/language/functions
+- Meta-arguments: https://developer.hashicorp.com/terraform/language/meta-arguments

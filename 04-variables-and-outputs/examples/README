@@ -1,0 +1,232 @@
+# Variables
+
+## 1. Input Variables
+
+Input variables allow you to parameterize Terraform configurations, making them reusable across different environments without modifying the configuration files.
+
+### Variable Block
+
+Define a variable using the `variable` block:
+
+```hcl
+variable "var_name" {
+  type = string
+}
+```
+
+You can also provide a default value:
+
+```hcl
+variable "instance_type" {
+  type    = string
+  default = "t2.micro"
+}
+```
+
+If no default value is defined and no value is supplied, Terraform prompts you to enter one.
+
+## 2. Variable Types
+
+Terraform supports the following variable types:
+
+| Type | Description | Example |
+|---|---|---|
+| `string` | Text value | `"hello"` |
+| `number` | Numeric value | `10` |
+| `bool` | Boolean value | `true` |
+| `list(type)` | Ordered collection of values | `["a", "b"]` |
+| `set(type)` | Collection of unique values | `["a", "b"]` |
+| `map(type)` | Key-value collection | `{ env = "dev" }` |
+| `object({...})` | Collection with named attributes and defined types | `{ name = string, age = number }` |
+| `tuple([...])` | Ordered collection with potentially different element types | `["hello", 10, true]` |
+
+Examples:
+
+```hcl
+variable "availability_zones" {
+  type    = list(string)
+  default = ["us-east-1a", "us-east-1b"]
+}
+
+variable "instance_config" {
+  type = object({
+    name          = string
+    instance_type = string
+    monitoring    = bool
+  })
+}
+```
+
+## 3. Variable Files
+
+Terraform allows you to provide variable values through `.tfvars` files.
+
+Example: `variables.tfvars`
+
+```hcl
+instance_type = "t2.micro"
+region        = "us-east-1"
+```
+
+Terraform automatically loads:
+
+- `terraform.tfvars`
+- `terraform.tfvars.json`
+- Files ending in `.auto.tfvars`
+- Files ending in `.auto.tfvars.json`
+
+Other `.tfvars` files must be explicitly specified.
+
+### Apply Default Variables
+
+```powershell
+terraform apply
+```
+
+Terraform automatically loads the recognized variable files.
+
+### Apply a Different Variable File
+
+```powershell
+terraform apply -var-file="another-variable-file.tfvars"
+```
+
+## 4. Passing Variables Through the Prompt
+
+If a required variable has no default value and is not supplied through another method, Terraform prompts you to enter it.
+
+Example:
+
+```hcl
+variable "db_pass" {
+  type      = string
+  sensitive = true
+}
+```
+
+Terraform prompt:
+
+```text
+var.db_pass
+  password for database
+
+  Enter a value:
+```
+
+This approach is useful for testing, but interactive prompts should generally be avoided in automated workflows such as CI/CD pipelines.
+
+## 5. Passing Variables Through the CLI
+
+You can pass variable values directly using the `-var` option.
+
+```powershell
+terraform apply -var="db_pass=$DB_PASS_ENV_VAR"
+```
+
+You can also provide multiple variables:
+
+```powershell
+terraform apply `
+  -var="instance_type=t2.micro" `
+  -var="region=us-east-1"
+```
+
+**Security note:** Avoid exposing passwords or other sensitive values in command-line arguments, shell history, or logs. Prefer secure environment variables, protected variable files, or a secrets-management solution.
+
+---
+
+# Local Values (Locals)
+
+Local values allow you to assign names to expressions and reuse them throughout a Terraform configuration.
+
+Unlike input variables, locals cannot be assigned values directly from the Terraform CLI or variable files.
+
+### Example
+
+```hcl
+locals {
+  extra_tag = "extra-tag"
+}
+```
+
+You can reference a local value using `local.<name>`:
+
+```hcl
+resource "aws_instance" "instance" {
+  ami           = "ami-0123456789abcdef0"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = local.extra_tag
+  }
+}
+```
+
+**Key difference:**
+- Input variables (`var.name`): Accept values from outside the configuration.
+- Local values (`local.name`): Store and reuse expressions inside the configuration.
+
+---
+
+# Output Values
+
+Output values allow Terraform to display useful information about the resources it manages.
+
+They are particularly useful when you need to retrieve values that are only known after infrastructure has been created, such as a VM's IP address or an RDS endpoint.
+
+### Example
+
+```hcl
+output "instance_ip_addr" {
+  description = "Private IP address of the EC2 instance"
+  value       = aws_instance.instance.private_ip
+}
+```
+
+Another example:
+
+```hcl
+output "db_instance_addr" {
+  description = "RDS database endpoint"
+  value       = aws_db_instance.db.address
+}
+```
+
+### Sample Output
+
+After running `terraform apply`, Terraform may display:
+
+```text
+db_instance_addr = "terraform-20210504182745335900000001.cr2ub9wmsmpg.us-east-1.rds.amazonaws.com"
+instance_ip_addr = "172.31.24.95"
+```
+
+### Retrieving Outputs
+
+Outputs are displayed after a successful `terraform apply`.
+
+You can also retrieve them independently:
+
+```powershell
+terraform output
+```
+
+To retrieve a specific output:
+
+```powershell
+terraform output instance_ip_addr
+```
+
+To retrieve the raw value without additional formatting:
+
+```powershell
+terraform output -raw instance_ip_addr
+
+**Important:** Output values are stored in Terraform state. Marking an output as `sensitive = true` hides it from normal CLI display, but does not remove it from the state file.
+
+```hcl
+output "db_password" {
+  value     = var.db_pass
+  sensitive = true
+}
+```
